@@ -38,6 +38,7 @@ dashboardPage(
                              min=0, max=30, value=10, post="%"),
                  sliderInput("id_max_pct", "Substantially Indentical Max Increase",
                              min=0, max=100, value=30, post="%"),
+                 h3("Policies"),
                  actionButton("policy_default", "Current Policy"),
                  actionButton("policy_lowturnover", "Low Turnover"),
                  actionButton("policy_lowidentical", "Low Indentical Cap")

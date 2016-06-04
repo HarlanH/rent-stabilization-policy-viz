@@ -13,8 +13,24 @@ library(hexbin)
 library(scales)
 library(magrittr)
 
-shinyServer(function(input, output) {
+shinyServer(function(input, output, session) {
 
+  observeEvent(input$policy_default, {
+    updateSliderInput(session, "infl_increase_pct", value=2.5)
+    updateSliderInput(session, "std_increase_pct", value=10)
+    updateSliderInput(session, "id_max_pct", value=30)
+  })
+  observeEvent(input$policy_lowturnover, {
+    updateSliderInput(session, "infl_increase_pct", value=2.5)
+    updateSliderInput(session, "std_increase_pct", value=7.5)
+    updateSliderInput(session, "id_max_pct", value=30)
+  })
+  observeEvent(input$policy_lowidentical, {
+    updateSliderInput(session, "infl_increase_pct", value=2.5)
+    updateSliderInput(session, "std_increase_pct", value=10)
+    updateSliderInput(session, "id_max_pct", value=15)
+  })
+  
   init_state <- reactive({
     message("init_state")
     # generate a data frame of units

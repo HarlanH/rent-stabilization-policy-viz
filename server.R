@@ -9,6 +9,7 @@ library(shiny)
 library(shinydashboard)
 library(dplyr)
 library(ggplot2)
+library(hexbin)
 library(magrittr)
 
 shinyServer(function(input, output) {
@@ -44,7 +45,7 @@ shinyServer(function(input, output) {
                                                            size=input$var_years,
                                                            mu=input$mean_years)
       # foreach non-turnover unit, bump the rent
-      eoy_state$rent[!turnover_units] <- eoy_state$rent[!turnover_units] * (1+input$inflation/100)
+      eoy_state$rent[!turnover_units] <- eoy_state$rent[!turnover_units] * (1+input$infl_increase_pct/100)
       eoy_state$year <- yr
       accum_states[[yr]] <- eoy_state
     }
@@ -62,7 +63,16 @@ shinyServer(function(input, output) {
   
   output$rent_over_time <- renderPlot({
     message("rent_over_time")
-    ggplot(summarized_states(), aes(year, rent, group=unit_id)) + geom_line(alpha=.5, color='blue')
+    if (input$rent_graph_type == "Percentiles") {
+      ggplot(summarized_states(), aes(year, rent)) +
+        stat_summary(fun.data=median_hilow, geom="ribbon", alpha=.2) +
+        stat_summary(fun.data=function(x) median_hilow(x, conf.int=.75), geom="ribbon", alpha=.3) +
+        stat_summary(fun.data=median_hilow, color="red", geom="line")
+    } else {
+      ggplot(summarized_states(), aes(year, rent)) + 
+        geom_hex(bins=input$sim_years)
+    }
+    
   })
   
   output$final_rent_distribution <- renderPlot({
@@ -71,6 +81,7 @@ shinyServer(function(input, output) {
   })
   
   output$time_in_unit <- renderPlot({
+    message("time_in_unit")
     ggplot(init_state(), aes(yrs_to_turnover)) + geom_histogram(binwidth=1)
   })
 

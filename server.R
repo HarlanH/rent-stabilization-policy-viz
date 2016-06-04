@@ -64,6 +64,12 @@ shinyServer(function(input, output) {
     message("rent_over_time")
     ggplot(summarized_states(), aes(year, rent, group=unit_id)) + geom_line(alpha=.5, color='blue')
   })
+  
+  output$final_rent_distribution <- renderPlot({
+    message("final_rent_distribution")
+    ggplot(filter(summarized_states(), year==max(year)), aes(rent)) + geom_histogram(binwidth = 50)
+  })
+  
   output$time_in_unit <- renderPlot({
     ggplot(init_state(), aes(yrs_to_turnover)) + geom_histogram(binwidth=1)
   })

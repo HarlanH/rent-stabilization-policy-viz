@@ -19,7 +19,11 @@ dashboardPage(
              box(title="Rent Over Time", status="primary", width=NULL,
                  radioButtons("rent_graph_type", "Display As:", c("Percentiles", "Heat Map"),
                               inline=TRUE),
-                 plotOutput("rent_over_time")),
+                 plotOutput("rent_over_time"),
+                 p("The black line is just the adjustment from $1000 due to the 
+                   consumer price index. The red line and shaded areas show the ranges
+                   of rents over time -- the red line is the median rent, while the
+                   darker grey is the 25th-75th percentiles, and min and max rents.")),
              box(title="Supporting Graphs", width=NULL,
                  column(width=6,
                         plotOutput("time_in_unit", height="200px")),
@@ -51,6 +55,7 @@ dashboardPage(
                  sliderInput("sim_years", "Years", min=10, max=30, value=10, step=1)),
              box(title="About", width=NULL,
                  a("Code for DC Project", href="https://hackpad.com/Rent-Stabilization-Policy-Change-Impact-uLQIb7gQCYZ"),
+                 br(), 
                  a("Source", href="https://github.com/codefordc/rent-stabilization"))
       )
     )

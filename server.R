@@ -10,6 +10,7 @@ library(shinydashboard)
 library(dplyr)
 library(ggplot2)
 library(hexbin)
+library(scales)
 library(magrittr)
 
 shinyServer(function(input, output) {
@@ -39,13 +40,19 @@ shinyServer(function(input, output) {
       # decrease years to turnover
       eoy_state$yrs_to_turnover <- eoy_state$yrs_to_turnover - 1
       turnover_units <- eoy_state$yrs_to_turnover == 0
+      # foreach non-turnover unit, bump the rent
+      eoy_state$rent[!turnover_units] <- eoy_state$rent[!turnover_units] * (1+input$infl_increase_pct/100)
       # foreach turnover unit, bump the rent and regenerate years to turnover
-      eoy_state$rent[turnover_units] <- eoy_state$rent[turnover_units] * (1 + input$std_increase_pct/100)
+      eoy_state %<>% 
+        group_by(bld_id) %>%
+        mutate(max_bld_rent=max(rent)) %>% ungroup
+      standard_increase <- eoy_state$rent[turnover_units] * (1 + input$std_increase_pct/100)
+      maxunit_increase <- pmin(eoy_state$rent[turnover_units] * (1 + input$id_max_pct/100),
+                               eoy_state$max_bld_rent[turnover_units])
+      eoy_state$rent[turnover_units] <- pmax(standard_increase, maxunit_increase)
       eoy_state$yrs_to_turnover[turnover_units] <- rnbinom(sum(turnover_units),
                                                            size=input$var_years,
                                                            mu=input$mean_years)
-      # foreach non-turnover unit, bump the rent
-      eoy_state$rent[!turnover_units] <- eoy_state$rent[!turnover_units] * (1+input$infl_increase_pct/100)
       eoy_state$year <- yr
       accum_states[[yr]] <- eoy_state
     }
@@ -67,10 +74,16 @@ shinyServer(function(input, output) {
       ggplot(summarized_states(), aes(year, rent)) +
         stat_summary(fun.data=median_hilow, geom="ribbon", alpha=.2) +
         stat_summary(fun.data=function(x) median_hilow(x, conf.int=.75), geom="ribbon", alpha=.3) +
-        stat_summary(fun.data=median_hilow, color="red", geom="line")
+        stat_summary(fun.data=function(x) median_hilow(x, conf.int=1), color="red", geom="line") +
+        geom_abline(intercept = 1000, slope=input$infl_increase_pct*10) +
+        scale_x_continuous("Year", breaks=seq.int(from=0, to=input$sim_years)) +
+        scale_y_continuous("Rent", limits=c(1000,2000), labels=dollar)
     } else {
       ggplot(summarized_states(), aes(year, rent)) + 
-        geom_hex(bins=input$sim_years)
+        geom_hex(bins=input$sim_years) +
+        geom_abline(intercept = 1000, slope=input$infl_increase_pct*10) +
+        scale_x_continuous("Year", breaks=seq.int(from=0, to=input$sim_years)) +
+        scale_y_continuous("Rent", limits=c(1000,2000), labels=dollar)
     }
     
   })

@@ -12,6 +12,7 @@ library(ggplot2)
 library(hexbin)
 library(scales)
 library(magrittr)
+library(Hmisc)
 
 shinyServer(function(input, output, session) {
 

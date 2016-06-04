@@ -9,10 +9,12 @@ library(shiny)
 library(shinydashboard)
 library(dplyr)
 library(ggplot2)
+library(magrittr)
 
 shinyServer(function(input, output) {
 
   init_state <- reactive({
+    message("init_state")
     # generate a data frame of units
     units <- data.frame(bld_id=c(rep(seq.int(from=1000, length.out=input$num_small), 5),
                         rep(seq.int(from=2000, length.out=input$num_med), 25),
@@ -23,6 +25,44 @@ shinyServer(function(input, output) {
                                      size=input$var_years,
                                      mu=input$mean_years)
     units
+  })
+  
+  all_states <- reactive({ # generates a list of states
+    message("all_states")
+    # simulate states and accumulate
+    state <- init_state()
+    accum_states <- list()
+    eoy_state <- state
+    for (yr in seq_len(input$sim_years)) {
+      message("year = ", yr)
+      # decrease years to turnover
+      eoy_state$yrs_to_turnover <- eoy_state$yrs_to_turnover - 1
+      turnover_units <- eoy_state$yrs_to_turnover == 0
+      # foreach turnover unit, bump the rent and regenerate years to turnover
+      eoy_state$rent[turnover_units] <- eoy_state$rent[turnover_units] * (1 + input$std_increase_pct/100)
+      eoy_state$yrs_to_turnover[turnover_units] <- rnbinom(sum(turnover_units),
+                                                           size=input$var_years,
+                                                           mu=input$mean_years)
+      # foreach non-turnover unit, bump the rent
+      eoy_state$rent[!turnover_units] <- eoy_state$rent[!turnover_units] * (1+input$inflation/100)
+      eoy_state$year <- yr
+      accum_states[[yr]] <- eoy_state
+    }
+    accum_states
+  })
+  
+  summarized_states <- reactive({
+    message("summarized_states")
+    ret <- lapply(all_states(), function(st) {
+      select(st, unit_id, year, rent)
+    }) %>% rbind_all()
+    message("got summarized states; ", nrow(ret), " rows")
+    ret
+  })
+  
+  output$rent_over_time <- renderPlot({
+    message("rent_over_time")
+    ggplot(summarized_states(), aes(year, rent, group=unit_id)) + geom_line(alpha=.5, color='blue')
   })
   output$time_in_unit <- renderPlot({
     ggplot(init_state(), aes(yrs_to_turnover)) + geom_histogram(binwidth=1)
